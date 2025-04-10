@@ -14,6 +14,8 @@
 #define Sweeper_dir 5      // DIR Cytron 1 Channel
 #define Sweeper_pwm 17     // PWM Cytron 1 Channel
 
+// Pines de señal para los servomotores
+
  // Declaración de variables
  int velRob = 0;
  int angRob = 0;
