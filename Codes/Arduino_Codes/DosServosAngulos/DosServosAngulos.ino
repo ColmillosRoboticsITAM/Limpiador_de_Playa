@@ -1,7 +1,7 @@
 #include <ESP32Servo.h>
 
 const int pinServo1 = 2;  // Pin del primer servomotor
-const int pinServo2 = 4; // Pin del segundo servomotor (ajústalo según el pin que estés usando)
+const int pinServo2 = 4;  // Pin del segundo servomotor (ajústalo según el pin que estés usando)
 Servo servoMotor1;
 Servo servoMotor2;
 

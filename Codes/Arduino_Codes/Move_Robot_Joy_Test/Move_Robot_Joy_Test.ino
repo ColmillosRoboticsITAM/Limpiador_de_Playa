@@ -20,7 +20,6 @@
 
  int velSweeper = 0;
 
-
 // ---------------------------- Setup -----------------------------------------
 void setup() {
   // Configuración de pines como salida o entrada
