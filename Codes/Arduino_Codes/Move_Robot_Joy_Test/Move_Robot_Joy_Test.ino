@@ -11,8 +11,8 @@
 #define RMot_pwm 15     // PWM2 Cytron 2 Channel
 
 // Pines de conexión de los motores de la barredora
-#define Sweeper_dir 2      // DIR Cytron 1 Channel
-#define Sweeper_pwm 15     // PWM Cytron 1 Channel
+#define Sweeper_dir 5      // DIR Cytron 1 Channel
+#define Sweeper_pwm 17     // PWM Cytron 1 Channel
 
  // Declaración de variables
  int velRob = 0;
