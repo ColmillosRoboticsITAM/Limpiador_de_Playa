@@ -8,9 +8,6 @@
 #define RMot_dir 2      // Dir2 Cytron 
 #define RMot_pwm 15     // PWM2 Cytron
 
-// Configuración de PWM
-const int resolucionPWM = 10;   // Resolución de 10 bits (0-1023)
-const int frecuenciaPWM = 5000; // Frecuencia de 5 kHz
 
 void setup() {
   // Configuración de pines como salida o entrada
@@ -22,47 +19,55 @@ void setup() {
 void loop() {
   // Ejemplo de uso de la función moverRobot
   moveRobot(200, 0);  // Mover recto hacia adelante con velocidad PWM (50% de 1023)
-  Serial.println("adelante");
+  Serial.println("Forward");
   delay(2000);         // Esperar 2 segundos
-  moveRobot(200, -1); // Girar hacia la izquierda
-  Serial.println("izquierda");
+  moveRobot(200, -200); // Girar hacia la izquierda
+  Serial.println("Left");
   delay(2000);         // Esperar 2 segundos
-  moveRobot(200, 1);  // Girar hacia la derecha
-  Serial.println("derecha");
+  moveRobot(200, 300);  // Girar hacia la derecha
+  Serial.println("Right");
   delay(2000);         // Esperar 2 segundos
   moveRobot(-200, 0);  // Mover recto hacia atrás con velocidad PWM (50% de 1023)
-  Serial.println("atrás");
+  Serial.println("Back");
   delay(2000);         // Esperar 2 segundos
   moveRobot(0, 0);    // Detenido
-  Serial.println("Detenido");
+  Serial.println("Stop");
   delay(2000);         // Esperar 2 segundos
 }
 
 void moveRobot(int velocidadPWM, int direccion) {
+  // Variables para calcular las señales PWM de cada motor
+  int pwmIzquierdo = 0;
+  int pwmDerecho = 0;
+
+  pwmIzquierdo = constrain(velocidadPWM, 0, 255);
+  pwmDerecho = constrain(velocidadPWM, 0, 255);
+
   // Condiciones para establecer la dirección del giro
-  if (direccion == 0) {
-    // Movimiento recto
-    if (velocidadPWM > 0){
-      digitalWrite(LMot_dir,LOW);
-    digitalWrite(RMot_dir,LOW);
-    }
-    else{
-      digitalWrite(LMot_dir,HIGH);
-    digitalWrite(RMot_dir,HIGH);
-    }
-  } 
-  else if (direccion == -1) {
+  if (direccion < 0) {
     // Giro a la izquierda
     digitalWrite(LMot_dir,HIGH);
     digitalWrite(RMot_dir,LOW);
   } 
-  else if (direccion == 1) {
+  else if (direccion > 0) {
     // Giro a la derecha
     digitalWrite(LMot_dir,LOW);
     digitalWrite(RMot_dir,HIGH);
   }
+  else {   // direccion == 0
+    // Movimiento recto
+    if (velocidadPWM > 0){
+    digitalWrite(LMot_dir,LOW);
+    digitalWrite(RMot_dir,LOW);
+    }
+    else {
+    digitalWrite(LMot_dir,HIGH);
+    digitalWrite(RMot_dir,HIGH);
+    }
+  } 
+  
 
   // Aplicar señales PWM a los motores
-  analogWrite(LMot_pwm, abs(velocidadPWM));
-  analogWrite(RMot_pwm, abs(velocidadPWM));
+  analogWrite(LMot_pwm, abs(pwmIzquierdo));
+  analogWrite(RMot_pwm, abs(pwmDerecho));
 }
