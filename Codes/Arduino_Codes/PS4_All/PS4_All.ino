@@ -116,12 +116,13 @@ void moveIntake(bool activo) {
 // Movimiento del contenedor
 void moveContainer(bool abierto) {
   if (abierto) {
-    servo1.write(60);               // Ángulo de apertura
-    servo2.write(20);               // Complemento
+    servo1.write(anguloServo);               // Ángulo de apertura
+    servo2.write(180 - anguloServo);               // Complemento
     Serial.println("Contenedor ABIERTO");
   } else {
-    servo1.write(20);               // Ángulo de cierre
-    servo2.write(60);               // Complemento
+    servo1.write(180 - anguloServo);               // Ángulo de cierre
+    servo2.write(anguloServo);               // Complemento
     Serial.println("Contenedor CERRADO");
   }
 }
+
