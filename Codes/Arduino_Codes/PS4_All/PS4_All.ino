@@ -23,6 +23,7 @@ int velRob = 0;
 int angRob = 0;
 bool intakeActivo = false;
 bool containerAbierto = false;
+int anguloServo == 60;
 
 void setup() {
   pinMode(LMot_dir, OUTPUT);
