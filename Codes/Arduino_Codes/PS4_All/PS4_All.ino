@@ -2,18 +2,18 @@
 #include <ESP32Servo.h>
 
 // Pines de motores de tracción
-#define LMot_dir 16
-#define LMot_pwm 4
-#define RMot_dir 2
-#define RMot_pwm 15
+#define LMot_dir 2
+#define LMot_pwm 17
+#define RMot_dir 16
+#define RMot_pwm 4
 
 // Pines del motor de barredora
 #define Intake_dir 5
-#define Intake_pwm 17
+#define Intake_pwm 18
 
 // Pines de servomotores del contenedor
-#define Servo1_pin 18  
-#define Servo2_pin 19
+#define Servo1_pin 14  
+//#define Servo2_pin 19
 
 Servo servo1;
 Servo servo2;
@@ -23,7 +23,7 @@ int velRob = 0;
 int angRob = 0;
 bool intakeActivo = false;
 bool containerAbierto = false;
-int anguloServo == 60;
+int anguloServo = 60;
 
 void setup() {
   pinMode(LMot_dir, OUTPUT);
@@ -35,7 +35,7 @@ void setup() {
 
   // Servos
   servo1.attach(Servo1_pin);
-  servo2.attach(Servo2_pin);
+  //servo2.attach(Servo2_pin);
 
   // Posición inicial del contenedor
   moveContainer(false);
@@ -66,6 +66,14 @@ void loop() {
     cuadradoPrev = PS4.Square();
 
     delay(10);
+
+    // Parada de emergencia con OPTIONS
+    if (PS4.Options()) {
+      analogWrite(LMot_pwm, 0);
+      analogWrite(RMot_pwm, 0);
+      analogWrite(Intake_pwm, 0);
+    }
+
   } else {
     analogWrite(LMot_pwm, 0);
     analogWrite(RMot_pwm, 0);
@@ -118,11 +126,11 @@ void moveIntake(bool activo) {
 void moveContainer(bool abierto) {
   if (abierto) {
     servo1.write(anguloServo);               // Ángulo de apertura
-    servo2.write(180 - anguloServo);               // Complemento
+    //servo2.write(180 - anguloServo);               // Complemento
     Serial.println("Contenedor ABIERTO");
   } else {
     servo1.write(180 - anguloServo);               // Ángulo de cierre
-    servo2.write(anguloServo);               // Complemento
+    //servo2.write(anguloServo);               // Complemento
     Serial.println("Contenedor CERRADO");
   }
 }
