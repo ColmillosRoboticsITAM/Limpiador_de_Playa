@@ -101,7 +101,7 @@ void leerSerial() {
 // =================================================
 // PID GIRO
 // =================================================
-int PID_Giro(float ang) {
+float PID_Giro(float ang) {
   float err = ang;
   integral += err;
   float deriv = err - errPrev;
@@ -214,28 +214,68 @@ void loop() {
 
     case BUSCAR_LATA:
       digitalWrite(LED_B, HIGH);
+      digitalWrite(LED_A, LOW);
+      digitalWrite(LED_C, LOW);
       moveRobot(0, 0.25);
       if (ang_lata != 540) estadoActual = GIRAR_A_LATA;
       break;
 
     case GIRAR_A_LATA: {
-      int g = PID_Giro(ang_lata);
-      moveRobot(0, g/255.0);
-      if (abs(ang_lata) < 8) estadoActual = IR_A_LATA;
-    } break;
-
-    case IR_A_LATA: {
-      int g = PID_Giro(ang_lata);
-      moveRobot(0.35, g/255.0);
-      if (flag_lata) estadoActual = RECOGER_LATA;
-    } break;
-
-    case RECOGER_LATA:
-      digitalWrite(LED_A, HIGH);
-      moveRobot(0,0);
-      delay(500);
+    // Si se pierde la lata → regresar a buscar
+      if (ang_lata == 540) {
       estadoActual = BUSCAR_LATA;
       break;
+    }
+
+    digitalWrite(LED_B, LOW);
+    digitalWrite(LED_A, LOW);
+    digitalWrite(LED_C, LOW);
+
+    float g = PID_Giro(ang_lata);
+    moveRobot(0, g / 255.0);
+
+    if (abs(ang_lata) < 8)
+      estadoActual = IR_A_LATA;
+    }
+    break;
+
+    case IR_A_LATA: {
+    // Si se pierde la lata → regresar a buscar
+      if (ang_lata == 540) {
+       estadoActual = BUSCAR_LATA;
+      break;
+    }
+
+    digitalWrite(LED_A, LOW);
+    digitalWrite(LED_C, HIGH);
+    digitalWrite(LED_B, LOW);
+
+    float g = PID_Giro(ang_lata);
+    moveRobot(0.35, g / 255.0);
+
+    if (flag_lata)
+    estadoActual = RECOGER_LATA; 
+    //timer
+    }
+    break;
+
+    case RECOGER_LATA:{
+      digitalWrite(LED_A, HIGH);
+      digitalWrite(LED_C, LOW);
+      digitalWrite(LED_B, LOW);
+      moveRobot(0,0); //hacer que avance
+      delay(2000);
+      //fin timer
+      estadoActual = BUSCAR_LATA;
+      break;
+    }
+
+   case EVITAR_MAR:{
+      ejecutarEvitar();
+      
+      break;
+    }
   }
 }
+    
 
