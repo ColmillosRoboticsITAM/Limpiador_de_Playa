@@ -40,7 +40,7 @@ enum EstadoRobot {
 EstadoRobot estadoActual = INICIO;
 EstadoRobot estadoAnterior = INICIO;
 
-// -------------------- VISION (SERIAL) --------------------
+// -------------------- VISION --------------------
 float ang_lata = 540;
 bool flag_lata = false;
 bool flag_mar = false;
@@ -62,6 +62,10 @@ float integral = 0;
 // -------------------- EVITAR MAR --------------------
 unsigned long evitarStartTime = 0;
 bool evitarActivo = false;
+
+// -------------------- TIMER RECOGER LATA --------------------
+unsigned long recogerStartTime = 0;
+bool timerRecogerCorriendo = false;
 
 // =================================================
 // INTERRUPTS
@@ -132,7 +136,7 @@ void ledBlink(int pin, int t) {
 
   int i = (pin == LED_A) ? 0 : (pin == LED_B) ? 1 : 2;
 
-  if (millis() - last[i] > t) {
+  if (millis() - last[i] > (unsigned long)t) {
     last[i] = millis();
     state[i] = !state[i];
     digitalWrite(pin, state[i]);
@@ -221,61 +225,66 @@ void loop() {
       break;
 
     case GIRAR_A_LATA: {
-    // Si se pierde la lata → regresar a buscar
+      // Si se pierde la lata → regresa a buscar
       if (ang_lata == 540) {
-      estadoActual = BUSCAR_LATA;
-      break;
-    }
+        estadoActual = BUSCAR_LATA;
+        break;
+      }
 
-    digitalWrite(LED_B, LOW);
-    digitalWrite(LED_A, LOW);
-    digitalWrite(LED_C, LOW);
+      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_A, LOW);
+      digitalWrite(LED_C, LOW);
 
-    float g = PID_Giro(ang_lata);
-    moveRobot(0, g / 255.0);
+      float g = PID_Giro(ang_lata);
+      moveRobot(0, g / 255.0);
 
-    if (abs(ang_lata) < 8)
-      estadoActual = IR_A_LATA;
+      if (abs(ang_lata) < 8)
+        estadoActual = IR_A_LATA;
     }
     break;
 
     case IR_A_LATA: {
-    // Si se pierde la lata → regresar a buscar
+      // Si se pierde la lata → regresa a buscar
       if (ang_lata == 540) {
-       estadoActual = BUSCAR_LATA;
-      break;
-    }
+        estadoActual = BUSCAR_LATA;
+        break;
+      }
 
-    digitalWrite(LED_A, LOW);
-    digitalWrite(LED_C, HIGH);
-    digitalWrite(LED_B, LOW);
+      digitalWrite(LED_A, LOW);
+      digitalWrite(LED_C, HIGH);
+      digitalWrite(LED_B, LOW);
 
-    float g = PID_Giro(ang_lata);
-    moveRobot(0.35, g / 255.0);
+      float g = PID_Giro(ang_lata);
+      moveRobot(0.35, g / 255.0);
 
-    if (flag_lata)
-    estadoActual = RECOGER_LATA; 
-    //timer
+      if (flag_lata) {
+        // ===== TIMER =====
+        timerRecogerCorriendo = true;
+        recogerStartTime = millis();
+
+        estadoActual = RECOGER_LATA;
+      }
     }
     break;
 
-    case RECOGER_LATA:{
+    case RECOGER_LATA: {
       digitalWrite(LED_A, HIGH);
       digitalWrite(LED_C, LOW);
       digitalWrite(LED_B, LOW);
-      moveRobot(0,0); //hacer que avance
-      delay(2000);
-      //fin timer
-      estadoActual = BUSCAR_LATA;
-      break;
-    }
+      moveRobot(0.30, 0.0);
 
-   case EVITAR_MAR:{
+      // fin de timer
+      if (timerRecogerCorriendo && (millis() - recogerStartTime >= 2000)) {
+        timerRecogerCorriendo = false;
+        moveRobot(0, 0);
+        estadoActual = BUSCAR_LATA;
+      }
+    }
+    break;
+
+    case EVITAR_MAR: {
       ejecutarEvitar();
-      
       break;
     }
   }
 }
-    
-
