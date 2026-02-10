@@ -1,5 +1,5 @@
 /* =========================================================
-   FSM Mantis
+   FSM Mantis COMPLETO — estilo FSM funcional
    ========================================================= */
 
 // -------------------- ULTRASONICOS --------------------
@@ -35,26 +35,22 @@ enum EstadoRobot {
   IR_A_LATA,
   RECOGER_LATA,
   BUSCAR_CONT,
+  GIRAR_A_CONT,
   IR_A_CONT,
   ENTREGAR,
   EVITAR_MAR,
-  FINALIZAR
 };
 
 EstadoRobot estadoActual = INICIO;
 EstadoRobot estadoAnterior = INICIO;
 
-// -------------------- VISION (SERIAL) --------------------
+// -------------------- VISION --------------------
 float ang_lata = 540;
 bool flag_lata = false;
 bool flag_mar = false;
 bool hayCont = false;
 float ang_cont = 540;
 bool flag_cont = false;
-
-// -------------------- ENCODERS --------------------
-volatile long ticksL = 0;
-volatile long ticksR = 0;
 
 // -------------------- PID --------------------
 float kp = 1.3;
@@ -63,33 +59,20 @@ float kd = 0.15;
 float errPrev = 0;
 float integral = 0;
 
-// -------------------- EVITAR MAR --------------------
+// -------------------- TIMERS --------------------
 unsigned long evitarStartTime = 0;
 bool evitarActivo = false;
 
-// =================================================
-// INTERRUPTS
-// =================================================
-void IRAM_ATTR isr_LA() { ticksL++; }
-void IRAM_ATTR isr_RA() { ticksR++; }
+unsigned long recogerStartTime = 0;
+bool timerRecoger = false;
+
+unsigned long entregarStartTime = 0;
+bool timerEntregar = false;
 
 // =================================================
-// ULTRASONICOS
-// =================================================
-long leerDistancia(int trig, int echo) {
-  digitalWrite(trig, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trig, LOW);
+void IRAM_ATTR isr_LA() {}
+void IRAM_ATTR isr_RA() {}
 
-  long d = pulseIn(echo, HIGH, 25000);
-  if (d == 0) return 999;
-  return d / 58;
-}
-
-// =================================================
-// SERIAL – VISION
 // =================================================
 void leerSerial() {
   if (!Serial.available()) return;
@@ -103,18 +86,14 @@ void leerSerial() {
 }
 
 // =================================================
-// PID GIRO
-// =================================================
-int PID_Giro(float ang) {
+float PID_Giro(float ang) {
   float err = ang;
   integral += err;
   float deriv = err - errPrev;
   errPrev = err;
-  return (kp * err + ki * integral + kd * deriv);
+  return kp * err + ki * integral + kd * deriv;
 }
 
-// =================================================
-// MOTORES
 // =================================================
 void moveRobot(float v, float w) {
   int L = constrain((v - w) * 255, -255, 255);
@@ -128,11 +107,9 @@ void moveRobot(float v, float w) {
 }
 
 // =================================================
-// BLINKER ORIGINAL
-// =================================================
 void ledBlink(int pin, int t) {
-  static unsigned long last[3] = {0,0,0};
-  static bool state[3] = {0,0,0};
+  static unsigned long last[3];
+  static bool state[3];
 
   int i = (pin == LED_A) ? 0 : (pin == LED_B) ? 1 : 2;
 
@@ -144,9 +121,8 @@ void ledBlink(int pin, int t) {
 }
 
 // =================================================
-// EVITAR MAR
-// =================================================
 void ejecutarEvitar() {
+
   ledBlink(LED_C, 80);
 
   if (!evitarActivo) {
@@ -165,9 +141,8 @@ void ejecutarEvitar() {
 }
 
 // =================================================
-// SETUP
-// =================================================
 void setup() {
+
   Serial.begin(115200);
 
   pinMode(LED_A, OUTPUT);
@@ -179,14 +154,6 @@ void setup() {
   pinMode(RMot_dir, OUTPUT);
   pinMode(RMot_pwm, OUTPUT);
 
-  pinMode(USL_TRIG, OUTPUT);
-  pinMode(USC_TRIG, OUTPUT);
-  pinMode(USD_TRIG, OUTPUT);
-
-  pinMode(USL_ECHO, INPUT);
-  pinMode(USC_ECHO, INPUT);
-  pinMode(USD_ECHO, INPUT);
-
   attachInterrupt(L_EncA, isr_LA, RISING);
   attachInterrupt(R_EncA, isr_RA, RISING);
 
@@ -194,13 +161,10 @@ void setup() {
 }
 
 // =================================================
-// LOOP
-// =================================================
 void loop() {
 
   leerSerial();
 
-  // Evitar mar en cualquier estado
   if (flag_mar && estadoActual != EVITAR_MAR) {
     estadoAnterior = estadoActual;
     estadoActual = EVITAR_MAR;
@@ -209,59 +173,100 @@ void loop() {
   switch (estadoActual) {
 
     case INICIO:
-      digitalWrite(LED_A, HIGH);
-      digitalWrite(LED_B, LOW);
-      digitalWrite(LED_C, LOW);
-      moveRobot(0,0);
       estadoActual = BUSCAR_LATA;
       break;
 
     case BUSCAR_LATA:
-      digitalWrite(LED_B, HIGH);
-      moveRobot(0, 0.25);
+      ledBlink(LED_B,200);
+      moveRobot(0,0.25);
       if (ang_lata != 540) estadoActual = GIRAR_A_LATA;
       break;
 
     case GIRAR_A_LATA: {
-      int g = PID_Giro(ang_lata);
-      moveRobot(0, g/255.0);
-      if (abs(ang_lata) < 8) estadoActual = IR_A_LATA;
+
+      if (ang_lata == 540) { estadoActual = BUSCAR_LATA; break; }
+
+      float g = PID_Giro(ang_lata);
+      moveRobot(0,g/255.0);
+
+      if (abs(ang_lata)<8) estadoActual = IR_A_LATA;
     } break;
 
     case IR_A_LATA: {
-      int g = PID_Giro(ang_lata);
-      moveRobot(0.35, g/255.0);
-      if (flag_lata) estadoActual = RECOGER_LATA;
+
+      if (ang_lata == 540) { estadoActual = BUSCAR_LATA; break; }
+
+      float g = PID_Giro(ang_lata);
+      moveRobot(0.35,g/255.0);
+
+      if(flag_lata){
+        timerRecoger=true;
+        recogerStartTime=millis();
+        estadoActual=RECOGER_LATA;
+      }
+
     } break;
 
     case RECOGER_LATA:
-      digitalWrite(LED_A, HIGH);
-      moveRobot(0,0);
-      delay(500);
-      estadoActual = BUSCAR_CONT;
-      break;
+
+      moveRobot(0.3,0);
+
+      if(timerRecoger && millis()-recogerStartTime>2000){
+        timerRecoger=false;
+        estadoActual=BUSCAR_CONT;
+      }
+
+    break;
 
     case BUSCAR_CONT:
-      ledBlink(LED_B, 300);
-      moveRobot(0, 0.25);
-      if (hayCont) estadoActual = IR_A_CONT;
-      break;
+
+      ledBlink(LED_B,300);
+      moveRobot(0,0.25);
+
+      if(hayCont) estadoActual=GIRAR_A_CONT;
+
+    break;
+
+    case GIRAR_A_CONT: {
+
+      if(!hayCont){ estadoActual=BUSCAR_CONT; break;}
+
+      float g=PID_Giro(ang_cont);
+      moveRobot(0,g/255.0);
+
+      if(abs(ang_cont)<8) estadoActual=IR_A_CONT;
+
+    } break;
 
     case IR_A_CONT: {
-      int g = PID_Giro(ang_cont);
-      moveRobot(0.35, g/255.0);
-      if (flag_cont) estadoActual = ENTREGAR;
+
+      if(!hayCont){ estadoActual=BUSCAR_CONT; break;}
+
+      float g=PID_Giro(ang_cont);
+      moveRobot(0.35,g/255.0);
+
+      if(flag_cont){
+        timerEntregar=true;
+        entregarStartTime=millis();
+        estadoActual=ENTREGAR;
+      }
+
     } break;
 
     case ENTREGAR:
-      ledBlink(LED_C, 150);
+
       moveRobot(0,0);
-      delay(800);
-      estadoActual = BUSCAR_LATA;
-      break;
+      ledBlink(LED_C,150);
+
+      if(timerEntregar && millis()-entregarStartTime>1500){
+        timerEntregar=false;
+        estadoActual=BUSCAR_LATA;
+      }
+
+    break;
 
     case EVITAR_MAR:
       ejecutarEvitar();
-      break;
+    break;
   }
 }
